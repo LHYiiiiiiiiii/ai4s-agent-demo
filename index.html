@@ -27,8 +27,9 @@
 
 <script src="https://cdn.bootcdn.net/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 <script>
-// ===================== 1. 阿里云密钥&接口（已填入你的真实Key） =====================
+// ===================== 1. 阿里云密钥&【修正后的正确接口地址】 =====================
 const ALIYUN_API_KEY = "sk-ws-H.RYRPRMR.S7JP.MEUCIFvA4lyF2u5cp4Dka-xABAm8aUOJJe843XxigKehiFJSAiEA8OY9WbSf2wcdvHv_5hy1wP8jHRRPivsJn6j82gYxF24";
+// 正确官方接口URL
 const MODEL_URL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
 
 // ===================== 2. 固定专业人格设定 =====================
@@ -57,7 +58,7 @@ function filterSensitive(text) {
     return text;
 }
 
-// ===================== 4. 调用阿里云Qwen3.7-plus模型（修复重复model语法错误） =====================
+// ===================== 4. 调用阿里云Qwen3.7-plus模型 =====================
 async function sendMessage() {
     let userInput = document.getElementById("user-input").value.trim();
     if (!userInput) return;
