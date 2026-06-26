@@ -85,7 +85,11 @@ async function sendMessage() {
                         {"role": "user", "content": userInput}
                     ]
                 },
-                parameters: {temperature: 0.7}
+                parameters: {
+    		temperature: 0.7,
+    		result_format: "message"
+	},
+	model: "qwen3.7-plus" // 严格大小写拼写
             })
         });
 
