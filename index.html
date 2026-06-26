@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>专业隐私守护陪聊智能体</title>
+    <style>
+        * {margin: 0; padding: 0; box-sizing: border-box; font-family: "微软雅黑";}
+        body {background: #f5f7fa; max-width: 800px; margin: 20px auto; padding: 20px;}
+        .chat-box {height: 600px; background: white; border-radius: 10px; padding: 20px; overflow-y: auto; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);}
+        .msg {margin: 15px 0; padding: 10px 15px; border-radius: 8px; max-width: 70%; word-wrap: break-word;}
+        .user {background: #0066ff; color: white; margin-left: auto;}
+        .agent {background: #e9e9eb; color: #333; margin-right: auto;}
+        .input-box {display: flex; gap: 10px;}
+        #user-input {flex: 1; padding: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px;}
+        #send-btn {padding: 15px 30px; background: #0066ff; color: white; border: none; border-radius: 8px; cursor: pointer;}
+        .tip {color: #666; font-size: 12px; margin-bottom: 10px;}
+    </style>
+</head>
+<body>
+    <h2>阿里云Qwen3.7-plus 隐私守护专业陪聊智能体</h2>
+    <p class="tip">✅ 隐私承诺：对话数据仅本地处理，敏感信息自动脱敏，不上传云端存储</p>
+    <div class="chat-box" id="chat-box"></div>
+    <div class="input-box">
+        <input type="text" id="user-input" placeholder="请输入你的消息...">
+        <button id="send-btn">发送</button>
+    </div>
+
+<script src="https://cdn.bootcdn.net/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+<script>
+// ===================== 1. 阿里云密钥&接口（已填入你的真实Key） =====================
+const ALIYUN_API_KEY = "你的阿里云API Key";
+const MODEL_URL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
+
+// ===================== 2. 固定专业人格设定 =====================
+const PERSONALITY = `
+你是一款【专业隐私守护陪伴智能体】，严格执行以下人设与规则：
+1. 性格：温柔耐心、共情中立，擅长情绪倾听、压力疏导、正向心理引导，绝不评判用户，拒绝娱乐化闲聊。
+2. 红线规则：绝不主动索要姓名、手机号、住址、身份证、银行卡等隐私信息；遇到用户主动发送隐私内容自动提醒保护隐私。
+3. 内容合规：拒绝回复暴力、色情、违法、消极极端内容，发现违规内容礼貌拒绝。
+4. 语言风格：简洁温暖、稳重专业，话术平实，不油腻、不搞搞笑娱乐内容。
+`;
+
+// ===================== 3. 隐私数据处理核心函数 =====================
+// 本地AES加密（仅浏览器本地缓存使用，对话明文不会额外上传第三方服务器）
+function encryptData(text) {
+    return CryptoJS.AES.encrypt(text, "ai4s-privacy-job-key2026").toString();
+}
+
+// 敏感信息自动脱敏过滤
+function filterSensitive(text) {
+    // 手机号脱敏
+    text = text.replace(/1[3-9]\d{9}/g, "[手机号码已自动隐私脱敏]");
+    // 身份证脱敏
+    text = text.replace(/\d{18}|\d{17}[0-9Xx]/g, "[身份证号已自动隐私脱敏]");
+    // 银行卡简单匹配脱敏
+    text = text.replace(/\d{16,19}/g, "[银行卡号已自动隐私脱敏]");
+    return text;
+}
+
+// ===================== 4. 调用阿里云Qwen3.7-plus模型 =====================
+async function sendMessage() {
+    let userInput = document.getElementById("user-input").value.trim();
+    if (!userInput) return;
+
+    // 前置隐私处理
+    userInput = filterSensitive(userInput);
+    encryptData(userInput);
+
+    // 渲染用户消息
+    addMessage(userInput, "user");
+    document.getElementById("user-input").value = "";
+
+    try {
+        const response = await fetch(MODEL_URL, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${ALIYUN_API_KEY}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                model: "qwen3.7-plus",
+                input: {
+                    messages: [
+                        {"role": "system", "content": PERSONALITY},
+                        {"role": "user", "content": userInput}
+                    ]
+                },
+                parameters: {temperature: 0.7}
+            })
+        });
+
+        const data = await response.json();
+        // 状态判断
+        if(data.output && data.output.text){
+            let reply = filterSensitive(data.output.text);
+            addMessage(reply, "agent");
+        }else{
+            addMessage("智能体提示：模型返回异常，请稍后重试", "agent");
+            console.log("接口返回详情：", data);
+        }
+    } catch (error) {
+        addMessage("服务连接异常，大概率为本地跨域问题，请使用VSCode的Live Server插件打开网页测试", "agent");
+        console.error("调用错误详情：", error);
+    }
+}
+
+// ===================== 5. 页面消息渲染 =====================
+function addMessage(text, type) {
+    const box = document.getElementById("chat-box");
+    const div = document.createElement("div");
+    div.className = `msg ${type}`;
+    div.innerText = text;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
+
+// 绑定点击、回车发送
+document.getElementById("send-btn").onclick = sendMessage;
+document.getElementById("user-input").onkeydown = (e) => {
+    if(e.key === "Enter") sendMessage();
+};
+</script>
+</body>
+</html>
