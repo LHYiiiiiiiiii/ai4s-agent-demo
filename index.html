@@ -57,7 +57,7 @@ function filterSensitive(text) {
     return text;
 }
 
-// ===================== 4. 调用阿里云Qwen3.7-plus模型 =====================
+// ===================== 4. 调用阿里云Qwen3.7-plus模型（修复重复model语法错误） =====================
 async function sendMessage() {
     let userInput = document.getElementById("user-input").value.trim();
     if (!userInput) return;
@@ -86,24 +86,23 @@ async function sendMessage() {
                     ]
                 },
                 parameters: {
-    		temperature: 0.7,
-    		result_format: "message"
-	},
-	model: "qwen3.7-plus" // 严格大小写拼写
+                    temperature: 0.7,
+                    result_format: "message"
+                }
             })
         });
 
         const data = await response.json();
+        console.log("阿里云完整返回：", data);
         // 状态判断
-        if(data.output && data.output.text){
+        if(response.ok && data.output && data.output.text){
             let reply = filterSensitive(data.output.text);
             addMessage(reply, "agent");
         }else{
-            addMessage("智能体提示：模型返回异常，请稍后重试", "agent");
-            console.log("接口返回详情：", data);
+            addMessage(`接口异常：${data.message || "请求失败"}`, "agent");
         }
     } catch (error) {
-        addMessage("服务连接异常，大概率为本地跨域问题，请使用VSCode的Live Server插件打开网页测试", "agent");
+        addMessage(`调用异常：${error.message}，可查看F12控制台详情`, "agent");
         console.error("调用错误详情：", error);
     }
 }
