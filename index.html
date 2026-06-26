@@ -27,10 +27,10 @@
 
 <script src="https://cdn.bootcdn.net/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 <script>
-// 密钥保留你自己的，仅修改下方URL
+// 你的密钥保留不变
 const ALIYUN_API_KEY = "sk-ws-H.RYRPRMR.S7JP.MEUCIFvA4lyF2u5cp4Dka-xABAm8aUOJJe843XxigKehiFJSAiEA8OY9WbSf2wcdvHv_5hy1wP8jHRRPivsJn6j82gYxF24";
-// 【修复：正确域名】
-const MODEL_URL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
+// 【核心修改：切换为多模态模型专用端点】
+const MODEL_URL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation";
 
 const PERSONALITY = `
 你是一款【专业隐私守护陪伴智能体】，严格执行以下人设与规则：
@@ -68,12 +68,19 @@ async function sendMessage() {
                 "Authorization": `Bearer ${ALIYUN_API_KEY}`,
                 "Content-Type": "application/json"
             },
+            // 【多模态标准请求体格式】
             body: JSON.stringify({
                 model: "qwen3.7-plus",
                 input: {
                     messages: [
-                        {"role": "system", "content": PERSONALITY},
-                        {"role": "user", "content": userInput}
+                        {
+                            "role": "system",
+                            "content": [{"type": "text", "text": PERSONALITY}]
+                        },
+                        {
+                            "role": "user",
+                            "content": [{"type": "text", "text": userInput}]
+                        }
                     ]
                 },
                 parameters: {
@@ -85,11 +92,12 @@ async function sendMessage() {
 
         const data = await response.json();
         console.log("阿里云完整返回：", data);
-        if(response.ok && data.output && data.output.text){
-            let reply = filterSensitive(data.output.text);
+        if(response.ok && data.output && data.output.choices && data.output.choices[0].message.content){
+            let replyText = data.output.choices[0].message.content[0].text;
+            let reply = filterSensitive(replyText);
             addMessage(reply, "agent");
         }else{
-            addMessage(`接口异常：${data.message || "请求失败"}`, "agent");
+            addMessage(`接口异常：${data.message || JSON.stringify(data)}`, "agent");
         }
     } catch (error) {
         addMessage(`调用异常：${error.message}，查看F12控制台详情`, "agent");
